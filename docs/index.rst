@@ -1,33 +1,35 @@
 treq: High-level Twisted HTTP Client API
 ========================================
 
-`treq <https://pypi.python.org/pypi/treq>`_ depends on a recent Twisted and functions on Python 2.7 and Python 3.3+ (including PyPy).
+Release v\ |release| (:doc:`What's new? <changelog>`).
+
+`treq <https://pypi.org/project/treq>`_ depends on a recent Twisted and functions on Python 2.7 and Python 3.3+ (including PyPy).
 
 Why?
 ----
 
-`requests`_ by `Kenneth Reitz`_ is a wonderful library.
+`requests`_ by Kenneth Reitz is a wonderful library.
 I want the same ease of use when writing Twisted applications.
 treq is not of course a perfect clone of `requests`_.
 I have tried to stay true to the do-what-I-mean spirit of the `requests`_ API and also kept the API familiar to users of `Twisted`_ and :class:`twisted.web.client.Agent` on which treq is based.
 
-.. _requests: http://python-requests.org/
-.. _Kenneth Reitz: https://www.gittip.com/kennethreitz/
-.. _Twisted: http://twistedmatrix.com/
+.. _requests: https://requests.readthedocs.io/en/master/
+.. _Twisted: https://twistedmatrix.com/
 
 Quick Start
 -----------
 
-Installation::
+Installation
 
-    pip install treq
+.. code-block:: console
+
+    $ pip install treq
 
 GET
 +++
 
 .. literalinclude:: examples/basic_get.py
-    :linenos:
-    :lines: 7-10
+    :pyobject: main
 
 Full example: :download:`basic_get.py <examples/basic_get.py>`
 
@@ -35,8 +37,7 @@ POST
 ++++
 
 .. literalinclude:: examples/basic_post.py
-    :linenos:
-    :lines: 9-14
+    :pyobject: main
 
 Full example: :download:`basic_post.py <examples/basic_post.py>`
 
@@ -82,11 +83,9 @@ Here is a list of `requests`_ features and their status in treq.
 +----------------------------------+----------+----------+
 | Connection Timeouts              | yes      | yes      |
 +----------------------------------+----------+----------+
+| HTTP(S) Proxy Support            | yes      | no       |
++----------------------------------+----------+----------+
 | .netrc support                   | yes      | no       |
-+----------------------------------+----------+----------+
-| Python 2.6                       | yes      | no       |
-+----------------------------------+----------+----------+
-| Python 2.7                       | yes      | yes      |
 +----------------------------------+----------+----------+
 | Python 3.x                       | yes      | yes      |
 +----------------------------------+----------+----------+
@@ -100,6 +99,7 @@ Table of Contents
     howto
     testing
     api
+    changelog
 
 Indices and tables
 ==================

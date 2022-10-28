@@ -1,7 +1,6 @@
-from __future__ import absolute_import, division, print_function
-
 from twisted.python.components import proxyForInterface
-from twisted.web.iweb import IResponse
+from twisted.web.iweb import IResponse, UNKNOWN_LENGTH
+from twisted.python import reflect
 
 from requests.cookies import cookiejar_from_dict
 
@@ -17,6 +16,27 @@ class _Response(proxyForInterface(IResponse)):
     def __init__(self, original, cookiejar):
         self.original = original
         self._cookiejar = cookiejar
+
+    def __repr__(self):
+        """
+        Generate a representation of the response which includes the HTTP
+        status code, Content-Type header, and body size, if available.
+        """
+        if self.original.length == UNKNOWN_LENGTH:
+            size = 'unknown size'
+        else:
+            size = '{:,d} bytes'.format(self.original.length)
+        # Display non-ascii bits of the content-type header as backslash
+        # escapes.
+        content_type_bytes = b', '.join(
+            self.original.headers.getRawHeaders(b'content-type', ()))
+        content_type = repr(content_type_bytes).lstrip('b')[1:-1]
+        return "<{} {} '{:.40s}' {}>".format(
+            reflect.qual(self.__class__),
+            self.original.code,
+            content_type,
+            size,
+        )
 
     def collect(self, collector):
         """
@@ -40,14 +60,16 @@ class _Response(proxyForInterface(IResponse)):
         """
         return content(self.original)
 
-    def json(self):
+    def json(self, **kwargs):
         """
         Collect the response body as JSON per :func:`treq.json_content()`.
+
+        :param kwargs: Any keyword arguments accepted by :py:func:`json.loads`
 
         :rtype: Deferred that fires with the decoded JSON when the entire body
             has been read.
         """
-        return json_content(self.original)
+        return json_content(self.original, **kwargs)
 
     def text(self, encoding='ISO-8859-1'):
         """
@@ -67,10 +89,6 @@ class _Response(proxyForInterface(IResponse)):
 
         :returns: A `list` of :class:`~treq.response._Response` objects
         """
-        if not hasattr(self, "previousResponse"):
-            raise NotImplementedError(
-                "Twisted < 13.1.0 does not support response history.")
-
         response = self
         history = []
 

@@ -1,30 +1,25 @@
-# coding: utf-8
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
 import cgi
+import sys
 
 from io import BytesIO
 
 from twisted.trial import unittest
 from zope.interface.verify import verifyObject
 
-from twisted.python import failure, compat
 from twisted.internet import task
 from twisted.web.client import FileBodyProducer
 from twisted.web.iweb import UNKNOWN_LENGTH, IBodyProducer
 
 from treq.multipart import MultiPartProducer, _LengthConsumer
 
-if compat._PY3:
-    long = int
-    unicode = compat.unicode
-
 
 class MultiPartProducerTestCase(unittest.TestCase):
     """
     Tests for the L{MultiPartProducer} which gets dictionary like object
-    with post parameters, converts them to mutltipart/form-data format
+    with post parameters, converts them to multipart/form-data format
     and feeds them to an L{IConsumer}.
     """
     def _termination(self):
@@ -46,54 +41,9 @@ class MultiPartProducerTestCase(unittest.TestCase):
         self.cooperator = task.Cooperator(
             self._termination, self._scheduled.append)
 
-    def successResultOf(self, deferred):
-        """
-        Backport from 13.0 for compatibility with older Twisted versions
-        """
-        result = []
-        deferred.addBoth(result.append)
-        if not result:
-            self.fail(
-                "Success result expected on %r, found no result instead" % (
-                    deferred,))
-        elif isinstance(result[0], failure.Failure):
-            self.fail(
-                "Success result expected on %r, "
-                "found failure result (%r) instead" % (deferred, result[0]))
-        else:
-            return result[0]
-
-    def assertNoResult(self, deferred):
-        """
-        Backport from 13.0 for compatibility with older Twisted versions
-        """
-        result = []
-        deferred.addBoth(result.append)
-        if result:
-            self.fail(
-                "No result expected on %r, found %r instead" % (
-                    deferred, result[0]))
-
-    def failureResultOf(self, deferred):
-        """
-        Backport from 13.0 for compatibility with older Twisted versions
-        """
-        result = []
-        deferred.addBoth(result.append)
-        if not result:
-            self.fail(
-                "Failure result expected on %r, found no result instead" % (
-                    deferred,))
-        elif not isinstance(result[0], failure.Failure):
-            self.fail(
-                "Failure result expected on %r, "
-                "found success result (%r) instead" % (deferred, result[0]))
-        else:
-            return result[0]
-
     def getOutput(self, producer, with_producer=False):
         """
-        A convenience function to consume and return outpute.
+        A convenience function to consume and return output.
         """
         consumer = output = BytesIO()
 
@@ -109,7 +59,7 @@ class MultiPartProducerTestCase(unittest.TestCase):
 
     def newLines(self, value):
 
-        if isinstance(value, unicode):
+        if isinstance(value, str):
             return value.replace(u"\n", u"\r\n")
         else:
             return value.replace(b"\n", b"\r\n")
@@ -128,20 +78,26 @@ class MultiPartProducerTestCase(unittest.TestCase):
         passed as a parameter without either a C{seek} or C{tell} method,
         its C{length} attribute is set to C{UNKNOWN_LENGTH}.
         """
-        class HasSeek(object):
+        class CantTell:
             def seek(self, offset, whence):
-                pass
+                """
+                A C{seek} method that is never called because there is no
+                matching C{tell} method.
+                """
 
-        class HasTell(object):
+        class CantSeek:
             def tell(self):
-                pass
+                """
+                A C{tell} method that is never called because there is no
+                matching C{seek} method.
+                """
 
         producer = MultiPartProducer(
-            {"f": ("name", None, FileBodyProducer(HasSeek()))})
+            {"f": ("name", None, FileBodyProducer(CantTell()))})
         self.assertEqual(UNKNOWN_LENGTH, producer.length)
 
         producer = MultiPartProducer(
-            {"f": ("name", None, FileBodyProducer(HasTell()))})
+            {"f": ("name", None, FileBodyProducer(CantSeek()))})
         self.assertEqual(UNKNOWN_LENGTH, producer.length)
 
     def test_knownLengthOnFile(self):
@@ -243,7 +199,7 @@ Hello, World
         L{MultiPartProducer.startProducing} fires with a L{Failure} wrapping
         that exception.
         """
-        class BrokenFile(object):
+        class BrokenFile:
             def read(self, count):
                 raise IOError("Simulated bad thing")
 
@@ -639,9 +595,19 @@ my lovely bytes
             )
         )
 
-        form = cgi.parse_multipart(BytesIO(output), {"boundary": b"heyDavid"})
-        self.assertEqual(set([b'just a string\r\n', b'another string']),
-                         set(form['cfield']))
+        form = cgi.parse_multipart(BytesIO(output), {
+            "boundary": b"heyDavid",
+            "CONTENT-LENGTH": str(len(output)),
+        })
+
+        # Since Python 3.7, the value for a non-file field is now a list
+        # of strings, not bytes.
+        if sys.version_info >= (3, 7):
+            self.assertEqual(set(['just a string\r\n', 'another string']),
+                             set(form['cfield']))
+        else:
+            self.assertEqual(set([b'just a string\r\n', b'another string']),
+                             set(form['cfield']))
 
         self.assertEqual(set([b'my lovely bytes2']), set(form['efield']))
         self.assertEqual(set([b'my lovely bytes219']), set(form['xfield']))
@@ -656,15 +622,15 @@ class LengthConsumerTestCase(unittest.TestCase):
 
     def test_scalarsUpdateCounter(self):
         """
-        When a long or an int are written, _LengthConsumer updates its internal
+        When an int is written, _LengthConsumer updates its internal
         counter.
         """
         consumer = _LengthConsumer()
         self.assertEqual(consumer.length, 0)
-        consumer.write(long(1))
+        consumer.write(1)
         self.assertEqual(consumer.length, 1)
         consumer.write(2147483647)
-        self.assertEqual(consumer.length, long(2147483648))
+        self.assertEqual(consumer.length, 2147483648)
 
     def test_stringUpdatesCounter(self):
         """

@@ -1,10 +1,8 @@
-from __future__ import absolute_import, division, print_function
-
 import cgi
 import json
 
 from twisted.internet.defer import Deferred, succeed
-
+from twisted.python.failure import Failure
 from twisted.internet.protocol import Protocol
 from twisted.web.client import ResponseDone
 from twisted.web.http import PotentialDataLoss
@@ -22,6 +20,9 @@ def _encoding_from_headers(headers):
     if 'charset' in params:
         return params.get('charset').strip("'\"")
 
+    if content_type == 'application/json':
+        return 'UTF-8'
+
 
 class _BodyCollector(Protocol):
     def __init__(self, finished, collector):
@@ -29,9 +30,16 @@ class _BodyCollector(Protocol):
         self.collector = collector
 
     def dataReceived(self, data):
-        self.collector(data)
+        try:
+            self.collector(data)
+        except BaseException:
+            self.transport.loseConnection()
+            self.finished.errback(Failure())
+            self.finished = None
 
     def connectionLost(self, reason):
+        if self.finished is None:
+            return
         if reason.check(ResponseDone):
             self.finished.callback(None)
         elif reason.check(PotentialDataLoss):
@@ -47,9 +55,13 @@ def collect(response, collector):
 
     This function may only be called **once** for a given response.
 
+    If the ``collector`` raises an exception, it will be set as the error value
+    on response ``Deferred`` returned from this function, and the underlying
+    HTTP transport will be closed.
+
     :param IResponse response: The HTTP response to collect the body from.
-    :param collector: A callable to be called each time data is available
-        from the response body.
+    :param collector: A callable to be called each time data is available from
+        the response body.
     :type collector: single argument callable
 
     :rtype: Deferred that fires with None when the entire body has been read.
@@ -79,7 +91,7 @@ def content(response):
     return d
 
 
-def json_content(response):
+def json_content(response, **kwargs):
     """
     Read the contents of an HTTP response and attempt to decode it as JSON.
 
@@ -88,12 +100,14 @@ def json_content(response):
 
     :param IResponse response: The HTTP Response to get the contents of.
 
+    :param kwargs: Any keyword arguments accepted by :py:func:`json.loads`
+
     :rtype: Deferred that fires with the decoded JSON.
     """
     # RFC7159 (8.1): Default JSON character encoding is UTF-8
     d = text_content(response, encoding='utf-8')
 
-    d.addCallback(json.loads)
+    d.addCallback(lambda text: json.loads(text, **kwargs))
     return d
 
 

@@ -1,72 +1,67 @@
-treq
-====
+treq: High-level Twisted HTTP Client API
+========================================
 
 |pypi|_
-|build|_
+|calver|_
 |coverage|_
+|documentation|_
 
 ``treq`` is an HTTP library inspired by
-`requests <http://www.python-requests.org>`_ but written on top of
-`Twisted <http://www.twistedmatrix.com>`_'s
-`Agents <http://twistedmatrix.com/documents/current/api/twisted.web.client.Agent.html>`_.
+`requests <https://requests.readthedocs.io/>`_ but written on top of
+`Twisted <https://www.twistedmatrix.com>`_'s
+`Agents <https://twistedmatrix.com/documents/current/api/twisted.web.client.Agent.html>`_.
 
 It provides a simple, higher level API for making HTTP requests when
 using Twisted.
 
 .. code-block:: python
 
-    >>> from treq import get
+    >>> import treq
 
     >>> def done(response):
-    ...     print response.code
+    ...     print(response.code)
     ...     reactor.stop()
 
-    >>> get("http://www.github.com").addCallback(done)
+    >>> treq.get("https://github.com").addCallback(done)
 
     >>> from twisted.internet import reactor
     >>> reactor.run()
     200
 
-For more info `read the docs <http://treq.readthedocs.org>`_.
+For more info `read the docs <https://treq.readthedocs.org>`_.
 
-Contribute
-==========
+Contributing
+------------
 
-``treq`` is hosted on `GitHub <http://github.com/twisted/treq>`_.
+``treq`` development is hosted on `GitHub <https://github.com/twisted/treq>`_.
 
-Feel free to fork and send contributions over.
+We welcome contributions: feel to fork and send contributions over.
+See `CONTRIBUTING.rst <https://github.com/twisted/treq/blob/master/CONTRIBUTING.rst>`_ for more info.
 
-Developing
-==========
+Code of Conduct
+---------------
 
-Install dependencies:
+Refer to the `Twisted code of conduct <https://github.com/twisted/twisted/blob/trunk/code_of_conduct.md>`_.
 
-::
+Copyright and License
+---------------------
 
-    pip install treq[dev]
+``treq`` is made available under the MIT license.
+See `LICENSE <./LICENSE>`_ for legal details and copyright notices.
 
-Run Tests (unit & integration):
 
-::
-
-    trial treq
-
-Lint:
-
-::
-
-    pep8 treq
-    pyflakes treq
-
-Build docs::
-
-    tox -e docs
-
-.. |build| image:: https://api.travis-ci.org/twisted/treq.svg?branch=master
-.. _build: https://travis-ci.org/twisted/treq
-
-.. |coverage| image:: https://codecov.io/github/twisted/treq/coverage.svg?branch=master
-.. _coverage: https://codecov.io/github/twisted/treq
-
+.. _pypi: https://pypi.org/project/treq/
 .. |pypi| image:: https://img.shields.io/pypi/v/treq.svg
-.. _pypi: https://pypi.python.org/pypi/treq
+    :alt: PyPI
+
+.. _calver: https://calver.org/
+.. |calver| image:: https://img.shields.io/badge/calver-YY.MM.MICRO-22bfda.svg
+    :alt: calver: YY.MM.MICRO
+
+.. _coverage: https://coveralls.io/github/twisted/treq
+.. |coverage| image:: https://coveralls.io/repos/github/twisted/treq/badge.svg
+    :alt: Coverage
+
+.. _documentation: https://treq.readthedocs.org
+.. |documentation| image:: https://readthedocs.org/projects/treq/badge/
+    :alt: Documentation

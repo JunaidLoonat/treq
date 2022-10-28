@@ -7,49 +7,54 @@ classifiers = [
     "Operating System :: OS Independent",
     "Framework :: Twisted",
     "Programming Language :: Python",
-    "Programming Language :: Python :: 2.7",
-    "Programming Language :: Python :: 3.3",
-    "Programming Language :: Python :: 3.4",
-    "Programming Language :: Python :: 3.5",
+    "Programming Language :: Python :: 3.6",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: Implementation :: CPython",
     "Programming Language :: Python :: Implementation :: PyPy",
 ]
 
 if __name__ == "__main__":
 
-    with open('README.rst') as f:
+    with open("README.rst") as f:
         readme = f.read()
 
     setup(
         name="treq",
-        packages=find_packages('src'),
+        packages=find_packages("src"),
         package_dir={"": "src"},
         setup_requires=["incremental"],
         use_incremental=True,
+        python_requires=">=3.6",
         install_requires=[
             "incremental",
             "requests >= 2.1.0",
-            "six",
-            "Twisted[tls] >= 16.4.0",
+            "hyperlink >= 21.0.0",
+            "Twisted[tls] >= 18.7.0",
             "attrs",
         ],
         extras_require={
             "dev": [
-                "pyflakes",
                 "pep8",
-                "sphinx",
-                # Can be removed once Python 2.6 is dropped.
-                "mock==1.0.1",
+                "pyflakes",
+                "httpbin==0.7.0",
+                "werkzeug==2.0.3",
+            ],
+            "docs": [
+                "sphinx>=1.4.8",
             ],
         },
         package_data={"treq": ["_version"]},
         author="David Reid",
         author_email="dreid@dreid.org",
-        maintainer="Amber Brown",
-        maintainer_email="hawkowl@twistedmatrix.com",
+        maintainer="Tom Most",
+        maintainer_email="twm@freecog.net",
         classifiers=classifiers,
-        description="A requests-like API built on top of twisted.web's Agent",
+        description="High-level Twisted HTTP Client API",
         license="MIT/X",
         url="https://github.com/twisted/treq",
-        long_description=readme
+        long_description=readme,
+        long_description_content_type="text/x-rst",
     )

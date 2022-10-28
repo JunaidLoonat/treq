@@ -21,24 +21,62 @@ Here is an example which simply a file object's write method to
 
 Full example: :download:`download_file.py <examples/download_file.py>`
 
+URLs, URIs, and Hyperlinks
+--------------------------
+
+The *url* argument to :py:meth:`HTTPClient.request` accepts three URL representations:
+
+- High-level: :class:`hyperlink.DecodedURL`
+- Mid-level :class:`str` (``unicode`` on Python 2)
+- Low-level: ASCII :class:`bytes` or :class:`hyperlink.URL`
+
+The high-level :class:`~hyperlink.DecodedURL` form is useful when programatically generating URLs.
+Here is an example that builds a URL that contains a ``&`` character, which is automatically escaped properly.
+
+.. literalinclude:: examples/basic_url.py
+    :linenos:
+    :pyobject: main
+
+Full example: :download:`basic_url.py <examples/basic_url.py>`
+
 Query Parameters
 ----------------
 
-:py:func:`treq.request` supports a ``params`` keyword argument which will
+:py:func:`treq.HTTPClient.request` supports a ``params`` keyword argument which will
 be URL-encoded and added to the ``url`` argument in addition to any query
 parameters that may already exist.
 
 The ``params`` argument may be either a ``dict`` or a ``list`` of
 ``(key, value)`` tuples.
 
-If it is a ``dict`` then the values in the dict may either be a ``str`` value
-or a ``list`` of ``str`` values.
+If it is a ``dict`` then the values in the dict may either be scalar values or a ``list`` or ``tuple`` thereof.
+Scalar values means ``str``, ``bytes``, or anything else — even ``None`` — which will be coerced to ``str``.
+Strings are UTF-8 encoded.
 
 .. literalinclude:: examples/query_params.py
     :linenos:
     :lines: 7-37
 
 Full example: :download:`query_params.py <examples/query_params.py>`
+
+If you prefer a strictly-typed API, try :class:`hyperlink.DecodedURL`.
+Use its :meth:`~hyperlink.URL.add` and :meth:`~hyperlink.URL.set` methods to add query parameters without risk of accidental type coercion.
+
+JSON
+----
+
+:meth:`HTTPClient.request() <treq.client.HTTPClient.request>` supports a *json* keyword argument that gives a data structure to serialize as JSON (using :func:`json.dumps()`).
+This also implies a ``Content-Type: application/json`` request header.
+The *json* parameter is mutually-exclusive with *data*.
+
+The :meth:`_Response.json()` method decodes a JSON response body.
+It buffers the whole response and decodes it with :func:`json.loads()`.
+
+.. literalinclude:: examples/json_post.py
+    :linenos:
+    :pyobject: main
+
+Full example: :download:`json_post.py <examples/json_post.py>`
 
 Auth
 ----
@@ -50,7 +88,7 @@ The ``auth`` argument should be a tuple of the form ``('username', 'password')``
 
 .. literalinclude:: examples/basic_auth.py
     :linenos:
-    :lines: 7-13
+    :lines: 7-15
 
 Full example: :download:`basic_auth.py <examples/basic_auth.py>`
 
@@ -63,7 +101,7 @@ The following will print a 200 OK response.
 
 .. literalinclude:: examples/redirects.py
     :linenos:
-    :lines: 7-13
+    :lines: 7-12
 
 Full example: :download:`redirects.py <examples/redirects.py>`
 
@@ -72,7 +110,7 @@ any of the request methods.
 
 .. literalinclude:: examples/disable_redirects.py
     :linenos:
-    :lines: 7-13
+    :lines: 7-12
 
 Full example: :download:`disable_redirects.py <examples/disable_redirects.py>`
 
@@ -91,10 +129,10 @@ Cookies
 
 Cookies can be set by passing a ``dict`` or ``cookielib.CookieJar`` instance
 via the ``cookies`` keyword argument.  Later cookies set by the server can be
-retrieved using the :py:meth:`~treq.response._Response.cookies()` method.
+retrieved using the :py:meth:`~treq.response._Response.cookies()` method of the response.
 
 The object returned by :py:meth:`~treq.response._Response.cookies()` supports the same key/value
-access as `requests cookies <http://requests.readthedocs.org/en/latest/user/quickstart/#cookies>`_.
+access as `requests cookies <https://requests.readthedocs.io/en/latest/user/quickstart/#cookies>`_.
 
 .. literalinclude:: examples/using_cookies.py
     :linenos:
@@ -102,16 +140,21 @@ access as `requests cookies <http://requests.readthedocs.org/en/latest/user/quic
 
 Full example: :download:`using_cookies.py <examples/using_cookies.py>`
 
-Agent Customization
--------------------
+Customizing the Twisted Agent
+-----------------------------
 
-treq creates its own `twisted.web.client.Agent
-<https://twistedmatrix.com/documents/current/api/twisted.web.client.Agent.html>`_
-with reasonable defaults, but you may want to provide your own custom agent.
-A custom agent can be passed to the various treq request methods using the
-``agent`` keyword argument.
+The main :py:mod:`treq` module has helper functions that automatically instantiate
+an instance of :py:class:`treq.client.HTTPClient`.  You can create an instance
+of :py:class:`~treq.client.HTTPClient` directly in order to customize the
+parameters used to initialize it.
+Internally, the :py:class:`~treq.client.HTTPClient` wraps an instance of
+:py:class:`twisted.web.client.Agent`.  When you create an instance of
+:py:class:`~treq.client.HTTPClient`, you must initialize it with an instance of
+:py:class:`~twisted.web.client.Agent`.  This allows you to customize its
+behavior.
 
-.. code-block:: python
+.. literalinclude:: examples/custom_agent.py
+    :linenos:
+    :lines: 6-19
 
-    custom_agent = Agent(reactor, connectTimeout=42)
-    treq.get(url, agent=custom_agent)
+Full example: :download:`custom_agent.py <examples/custom_agent.py>`
