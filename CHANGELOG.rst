@@ -8,6 +8,93 @@ Changelog
 
 .. towncrier release notes start
 
+26.7.0 (2026-07-01)
+===================
+
+Features
+--------
+
+- Document support for Python 3.14. (`#427 <https://github.com/twisted/treq/issues/427>`__)
+- PyPy 3.11 is now supported, and PyPy 3.9 and 3.10, which are no longer well-supported by the ecosystem, have been dropped. (`#429 <https://github.com/twisted/treq/issues/429>`__)
+
+
+Bugfixes
+--------
+
+- treq no longer vendors the ``multipart`` library, now that it no longer has import conflicts with ``python-multipart``. (`#403 <https://github.com/twisted/treq/issues/403>`__)
+- Fix building documentation with Sphinx 9.1.0. (`#423 <https://github.com/twisted/treq/issues/423>`__)
+
+
+Deprecations and Removals
+-------------------------
+
+- treq no longer depends on `requests`. Consequently, the ``cookies()`` method no longer returns a `requests.cookies.RequestsCookieJar <https://requests.readthedocs.io/en/latest/api/#requests.cookies.RequestsCookieJar>`_. Instead, it returns `treq.cookies.IndexableCookieJar`, which implements ``__getitem__`` as a compatibility shim. We have *not* attempted to maintain full dict-interface compatibility with ``RequestsCookieJar``, as many of its interface extensions are difficult to use securely because they obscure the relationship between cookies and domains. treq interfaces still accept a ``request.cookies.RequestsCookieJar`` as the *cookies* parameter, like any `http.cookiejar.CookieJar` subclass. (`#325 <https://github.com/twisted/treq/issues/325>`__)
+- Support for Python 3.8, which has reached end of support, has been dropped. (`#427 <https://github.com/twisted/treq/issues/427>`__)
+
+
+25.5.0 (2025-05-31)
+===================
+
+Features
+--------
+
+- treq is packaged with Hatchling, and consequently no longer directly depends on setuptools. (`#388 <https://github.com/twisted/treq/issues/388>`__)
+
+
+Improved Documentation
+----------------------
+
+- Update documentation to use `async`/`await` syntax (`#409 <https://github.com/twisted/treq/issues/409>`__)
+
+
+Deprecations and Removals
+-------------------------
+
+- Support for Python 3.8, which has reached end of support, is deprecated. This is the last release with support for Python 3.8. (`#407 <https://github.com/twisted/treq/issues/407>`__)
+
+
+24.9.1 (2024-09-19)
+===================
+
+Bugfixes
+--------
+
+- treq has vendored its dependency on the ``multipart`` library to avoid import
+  conflicts with ``python-multipart``; it should now be installable alongside
+  that library. (`#399 <https://github.com/twisted/treq/issues/399>`__)
+
+
+24.9.0 (2024-09-17)
+===================
+
+Features
+--------
+
+- treq now ships type annotations. (`#366 <https://github.com/twisted/treq/issues/366>`__)
+- The new :mod:`treq.cookies` module provides helper functions for working with `http.cookiejar.Cookie` and :class:`~http.cookiejar.CookieJar` objects. (`#384 <https://github.com/twisted/treq/issues/384>`__)
+- Python 3.13 is now supported. (`#391 <https://github.com/twisted/treq/issues/391>`__)
+
+
+Bugfixes
+--------
+
+- :mod:`treq.content.text_content()` no longer generates deprecation warnings due to use of the ``cgi`` module. (`#355 <https://github.com/twisted/treq/issues/355>`__)
+
+
+Deprecations and Removals
+-------------------------
+
+- Mixing the *json* argument with *files* or *data* now raises `TypeError`. (`#297 <https://github.com/twisted/treq/issues/297>`__)
+- Passing non-string (`str` or `bytes`) values as part of a dict to the *headers* argument now results in a `TypeError`, as does passing any collection other than a `dict` or :class:`~twisted.web.http.http_headers.Headers` instance. (`#302 <https://github.com/twisted/treq/issues/302>`__)
+- Support for Python 3.7 and PyPy 3.8, which have reached end of support, has been dropped. (`#378 <https://github.com/twisted/treq/issues/378>`__)
+
+
+Misc
+----
+
+- `#336 <https://github.com/twisted/treq/issues/336>`__, `#382 <https://github.com/twisted/treq/issues/382>`__, `#395 <https://github.com/twisted/treq/issues/395>`__
+
+
 23.11.0 (2023-11-03)
 ====================
 

@@ -1,4 +1,6 @@
+import unittest
 from unittest import mock
+from typing import Optional
 
 from twisted.python.failure import Failure
 
@@ -11,6 +13,7 @@ from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET
 
 from treq import collect, content, json_content, text_content
+from treq.content import _encoding_from_headers
 from treq.client import _BufferedResponse
 from treq.testing import StubTreq
 
@@ -75,7 +78,7 @@ class ContentTests(TestCase):
 
         d = collect(
             self.response,
-            lambda d: self.fail("Unexpectedly called with: {0}".format(d)))
+            lambda d: self.fail(f"Unexpectedly called with: {d}"))
 
         self.assertEqual(self.successResultOf(d), None)
 
@@ -139,10 +142,10 @@ class ContentTests(TestCase):
         self.response.headers = Headers()
         d = json_content(self.response)
 
-        self.protocol.dataReceived(u'{"msg":"hëlló!"}'.encode('utf-8'))
+        self.protocol.dataReceived('{"msg":"hëlló!"}'.encode())
         self.protocol.connectionLost(Failure(ResponseDone()))
 
-        self.assertEqual(self.successResultOf(d), {u'msg': u'hëlló!'})
+        self.assertEqual(self.successResultOf(d), {'msg': 'hëlló!'})
 
     def test_json_content_utf16(self):
         """
@@ -154,10 +157,10 @@ class ContentTests(TestCase):
         })
         d = json_content(self.response)
 
-        self.protocol.dataReceived(u'{"msg":"hëlló!"}'.encode('UTF-16LE'))
+        self.protocol.dataReceived('{"msg":"hëlló!"}'.encode('UTF-16LE'))
         self.protocol.connectionLost(Failure(ResponseDone()))
 
-        self.assertEqual(self.successResultOf(d), {u'msg': u'hëlló!'})
+        self.assertEqual(self.successResultOf(d), {'msg': 'hëlló!'})
 
     def test_text_content(self):
         self.response.headers = Headers(
@@ -168,7 +171,7 @@ class ContentTests(TestCase):
         self.protocol.dataReceived(b'\xe2\x98\x83')
         self.protocol.connectionLost(Failure(ResponseDone()))
 
-        self.assertEqual(self.successResultOf(d), u'\u2603')
+        self.assertEqual(self.successResultOf(d), '\u2603')
 
     def test_text_content_default_encoding_no_param(self):
         self.response.headers = Headers(
@@ -179,7 +182,7 @@ class ContentTests(TestCase):
         self.protocol.dataReceived(b'\xa1')
         self.protocol.connectionLost(Failure(ResponseDone()))
 
-        self.assertEqual(self.successResultOf(d), u'\xa1')
+        self.assertEqual(self.successResultOf(d), '\xa1')
 
     def test_text_content_default_encoding_no_header(self):
         self.response.headers = Headers()
@@ -189,7 +192,7 @@ class ContentTests(TestCase):
         self.protocol.dataReceived(b'\xa1')
         self.protocol.connectionLost(Failure(ResponseDone()))
 
-        self.assertEqual(self.successResultOf(d), u'\xa1')
+        self.assertEqual(self.successResultOf(d), '\xa1')
 
     def test_content_application_json_default_encoding(self):
         self.response.headers = Headers(
@@ -200,25 +203,27 @@ class ContentTests(TestCase):
         self.protocol.dataReceived(b'gr\xc3\xbcn')
         self.protocol.connectionLost(Failure(ResponseDone()))
 
-        self.assertEqual(self.successResultOf(d), u'grün')
+        self.assertEqual(self.successResultOf(d), 'grün')
 
     def test_text_content_unicode_headers(self):
         """
-        Header parsing is robust against unicode header names and values.
+        Parsing of the Content-Type header is robust in the face of
+        Unicode gunk in the header value, which is ignored.
         """
-        self.response.headers = Headers({
-            b'Content-Type': [
-                u'text/plain; charset="UTF-16BE"; u=ᛃ'.encode('utf-8')],
-            u'Coördination'.encode('iso-8859-1'): [
-                u'koʊˌɔrdɪˈneɪʃən'.encode('utf-8')],
-        })
+        self.response.headers = Headers(
+            {
+                b"Content-Type": [
+                    'text/plain; charset="UTF-16BE"; u=ᛃ'.encode()
+                ],
+            }
+        )
 
         d = text_content(self.response)
 
-        self.protocol.dataReceived(u'ᚠᚡ'.encode('UTF-16BE'))
+        self.protocol.dataReceived('ᚠᚡ'.encode('UTF-16BE'))
         self.protocol.connectionLost(Failure(ResponseDone()))
 
-        self.assertEqual(self.successResultOf(d), u'ᚠᚡ')
+        self.assertEqual(self.successResultOf(d), 'ᚠᚡ')
 
 
 class UnfinishedResponse(Resource):
@@ -267,6 +272,59 @@ class MoreRealisticContentTests(TestCase):
         # being closed.
         stub.flush()
         self.assertEqual(len(resource.request_finishes), 1)
-        self.assertIsInstance(
-            resource.request_finishes[0].value, ConnectionDone
+        self.assertIsInstance(resource.request_finishes[0].value, ConnectionDone)
+
+
+class EncodingFromHeadersTests(unittest.TestCase):
+    def _encodingFromContentType(self, content_type: str) -> Optional[str]:
+        """
+        Invoke `_encoding_from_headers()` for a header value.
+
+        :param content_type: A Content-Type header value.
+        :returns: The result of `_encoding_from_headers()`
+        """
+        h = Headers({"Content-Type": [content_type]})
+        return _encoding_from_headers(h)
+
+    def test_rfcExamples(self):
+        """
+        The examples from RFC 9110 § 8.3.1 are normalized to
+        canonical (lowercase) form.
+        """
+        for example in [
+            "text/html;charset=utf-8",
+            'Text/HTML;Charset="utf-8"',
+            'text/html; charset="utf-8"',
+            "text/html;charset=UTF-8",
+        ]:
+            self.assertEqual("utf-8", self._encodingFromContentType(example))
+
+    def test_multipleParams(self):
+        """The charset parameter is extracted even if mixed with other params."""
+        for example in [
+            "a/b;c=d;charSet=ascii",
+            "a/b;c=d;charset=ascii; e=f",
+            "a/b;c=d; charsEt=ascii;e=f",
+            "a/b;c=d;   charset=ascii;  e=f",
+        ]:
+            self.assertEqual("ascii", self._encodingFromContentType(example))
+
+    def test_quotedString(self):
+        """Any quotes that surround the value of the charset param are removed."""
+        self.assertEqual(
+            "ascii", self._encodingFromContentType("foo/bar; charset='ASCII'")
         )
+        self.assertEqual(
+            "shift_jis", self._encodingFromContentType('a/b; charset="Shift_JIS"')
+        )
+
+    def test_noCharset(self):
+        """None is returned when no valid charset parameter is found."""
+        for example in [
+            "application/octet-stream",
+            "text/plain;charset=",
+            "text/plain;charset=''",
+            "text/plain;charset=\"'\"",
+            "text/plain;charset=🙃",
+        ]:
+            self.assertIsNone(self._encodingFromContentType(example))

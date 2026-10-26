@@ -1,9 +1,12 @@
-from requests.cookies import cookiejar_from_dict
+from typing import Any, Callable, List
+
+from twisted.internet.defer import Deferred
 from twisted.python import reflect
 from twisted.python.components import proxyForInterface
 from twisted.web.iweb import UNKNOWN_LENGTH, IResponse
 
 from treq.content import collect, content, json_content, text_content
+from .cookies import IndexableCookieJar
 
 
 class _Response(proxyForInterface(IResponse)):  # type: ignore
@@ -12,11 +15,14 @@ class _Response(proxyForInterface(IResponse)):  # type: ignore
     adds a few convenience methods.
     """
 
-    def __init__(self, original, cookiejar):
+    original: IResponse
+    _cookiejar: IndexableCookieJar
+
+    def __init__(self, original: IResponse, cookiejar: IndexableCookieJar):
         self.original = original
         self._cookiejar = cookiejar
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Generate a representation of the response which includes the HTTP
         status code, Content-Type header, and body size, if available.
@@ -24,7 +30,7 @@ class _Response(proxyForInterface(IResponse)):  # type: ignore
         if self.original.length == UNKNOWN_LENGTH:
             size = "unknown size"
         else:
-            size = "{:,d} bytes".format(self.original.length)
+            size = f"{self.original.length:,d} bytes"
         # Display non-ascii bits of the content-type header as backslash
         # escapes.
         content_type_bytes = b", ".join(
@@ -38,7 +44,7 @@ class _Response(proxyForInterface(IResponse)):  # type: ignore
             size,
         )
 
-    def collect(self, collector):
+    def collect(self, collector: Callable[[bytes], None]) -> "Deferred[None]":
         """
         Incrementally collect the body of the response, per
         :func:`treq.collect()`.
@@ -51,7 +57,7 @@ class _Response(proxyForInterface(IResponse)):  # type: ignore
         """
         return collect(self.original, collector)
 
-    def content(self):
+    def content(self) -> "Deferred[bytes]":
         """
         Read the entire body all at once, per :func:`treq.content()`.
 
@@ -60,7 +66,7 @@ class _Response(proxyForInterface(IResponse)):  # type: ignore
         """
         return content(self.original)
 
-    def json(self, **kwargs):
+    def json(self, **kwargs: Any) -> "Deferred[Any]":
         """
         Collect the response body as JSON per :func:`treq.json_content()`.
 
@@ -71,7 +77,7 @@ class _Response(proxyForInterface(IResponse)):  # type: ignore
         """
         return json_content(self.original, **kwargs)
 
-    def text(self, encoding="ISO-8859-1"):
+    def text(self, encoding: str = "ISO-8859-1") -> "Deferred[str]":
         """
         Read the entire body all at once as text, per
         :func:`treq.text_content()`.
@@ -81,13 +87,11 @@ class _Response(proxyForInterface(IResponse)):  # type: ignore
         """
         return text_content(self.original, encoding)
 
-    def history(self):
+    def history(self) -> "List[_Response]":
         """
         Get a list of all responses that (such as intermediate redirects),
         that ultimately ended in the current response. The responses are
         ordered chronologically.
-
-        :returns: A `list` of :class:`~treq.response._Response` objects
         """
         response = self
         history = []
@@ -99,16 +103,13 @@ class _Response(proxyForInterface(IResponse)):  # type: ignore
         history.reverse()
         return history
 
-    def cookies(self):
+    def cookies(self) -> IndexableCookieJar:
         """
         Get a copy of this response's cookies.
-
-        :rtype: :class:`requests.cookies.RequestsCookieJar`
         """
-        jar = cookiejar_from_dict({})
+        jar = IndexableCookieJar()
 
-        if self._cookiejar is not None:
-            for cookie in self._cookiejar:
-                jar.set_cookie(cookie)
+        for cookie in self._cookiejar:
+            jar.set_cookie(cookie)
 
         return jar

@@ -89,6 +89,21 @@ Authentication
 
 .. autoexception:: UnknownAuthConfig
 
+Cookies
+-------
+
+.. module:: treq.cookies
+
+.. autofunction:: scoped_cookie
+
+.. autofunction:: search
+
+.. autoclass:: IndexableCookieJar
+
+   .. automethod:: __getitem__
+
+.. autoexception:: CookieCollision
+
 Test Helpers
 ------------
 
